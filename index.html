@@ -27,7 +27,7 @@
         let shortMalus = [];  // texte court
 
         // 🔄 Récupération dynamique depuis le PHP
-        fetch('malus.json')
+        fetch('./malus.json')
             .then(response => response.json())
             .then(data => {
                 malus = data.full;
