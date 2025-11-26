@@ -49,58 +49,63 @@
         function drawWheel() {
             if (malus.length === 0) return;
 
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const radius = canvas.width / 2 - 10;
-            const nbSegments = malus.length;
-            const anglePerSegment = (2 * Math.PI) / nbSegments;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = canvas.width / 2 - 10;
+    const nbSegments = malus.length;
+    const anglePerSegment = (2 * Math.PI) / nbSegments;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // ✅ Fond dégradé
+    const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    bgGradient.addColorStop(0, "#fdc423"); // coin haut-gauche
+    bgGradient.addColorStop(1, "#f49828"); // coin bas-droit
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            for (let i = 0; i < nbSegments; i++) {
-                const dark = colors[i % colors.length];
-                const light = lightColors[i % lightColors.length];
+    for (let i = 0; i < nbSegments; i++) {
+        const dark = colors[i % colors.length];
+        const light = lightColors[i % lightColors.length];
 
-                const grad = ctx.createRadialGradient(
-                    centerX, centerY, 5,
-                    centerX, centerY, radius
-                );
+        const grad = ctx.createRadialGradient(
+            centerX, centerY, 5,
+            centerX, centerY, radius
+        );
 
-                grad.addColorStop(0, light);
-                grad.addColorStop(0.5, light);
-                grad.addColorStop(1, dark);
-                ctx.fillStyle = grad;
+        grad.addColorStop(0, light);
+        grad.addColorStop(0.5, light);
+        grad.addColorStop(1, dark);
+        ctx.fillStyle = grad;
 
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.arc(
-                    centerX, centerY, radius,
-                    i * anglePerSegment + rotation,
-                    (i + 1) * anglePerSegment + rotation
-                );
-                ctx.closePath();
-                ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(
+            centerX, centerY, radius,
+            i * anglePerSegment + rotation,
+            (i + 1) * anglePerSegment + rotation
+        );
+        ctx.closePath();
+        ctx.fill();
 
-                // ✏️ --- Texte COURT sur la roue --- ✏️
-                ctx.save();
-                ctx.translate(centerX, centerY);
-                ctx.rotate(i * anglePerSegment + anglePerSegment / 2 + rotation);
-                ctx.textAlign = "right";
-                ctx.fillStyle = "#fff";
+        // Texte court
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(i * anglePerSegment + anglePerSegment / 2 + rotation);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#fff";
 
-                let text = shortMalus[i];
-                let fontSize = 16;
-                const maxWidth = radius - 30;
-                ctx.font = fontSize + "px Arial";
+        let text = shortMalus[i];
+        let fontSize = 16;
+        const maxWidth = radius - 30;
+        ctx.font = fontSize + "px Arial";
 
-                while (ctx.measureText(text).width > maxWidth && fontSize > 10) {
-                    fontSize--;
-                    ctx.font = fontSize + "px Arial";
-                }
+        while (ctx.measureText(text).width > maxWidth && fontSize > 10) {
+            fontSize--;
+            ctx.font = fontSize + "px Arial";
+        }
 
-                ctx.fillText(text, radius - 10, 8);
-                ctx.restore();
-            }
+        ctx.fillText(text, radius - 10, 8);
+        ctx.restore();
+    }
         }
 
         // 🎯 --- ANIMATION DU SPIN --- 🎯
