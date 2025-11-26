@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Roue des Malus Dynamique</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="wheel-container">
+        <canvas id="wheelCanvas" width="500" height="500"></canvas>
+        <div class="pointer"></div>
+    </div>
+
+    <button id="spinBtn">Tourner la roue !</button>
+    <p id="result"></p>
+
+    <script>
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const result = document.getElementById('result');
+        const spinBtn = document.getElementById('spinBtn');
+
+        let rotation = 0;
+        let malus = [];       // texte complet
+        let shortMalus = [];  // texte court
+
+        // 🔄 Récupération dynamique depuis le PHP
+        fetch('malus.php')
+            .then(response => response.json())
+            .then(data => {
+                malus = data.full;
+                shortMalus = data.short;
+                drawWheel();
+            });
+
+        const colors = [
+            "#f49727", "#8c4d99", "#d84426",
+            "#85bd45", "#ffcf02", "#4a4280"
+        ];
+
+        const lightColors = [
+            "#fee1c1", "#b584b9", "#ffbbb0",
+            "#b5d16d", "#ffe887", "#716fb1"
+        ];
+
+        // 🎡 --- DESSIN DE LA ROUE --- 🎡
+        function drawWheel() {
+            if (malus.length === 0) return;
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = canvas.width / 2 - 10;
+            const nbSegments = malus.length;
+            const anglePerSegment = (2 * Math.PI) / nbSegments;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < nbSegments; i++) {
+                const dark = colors[i % colors.length];
+                const light = lightColors[i % lightColors.length];
+
+                const grad = ctx.createRadialGradient(
+                    centerX, centerY, 5,
+                    centerX, centerY, radius
+                );
+
+                grad.addColorStop(0, light);
+                grad.addColorStop(0.5, light);
+                grad.addColorStop(1, dark);
+                ctx.fillStyle = grad;
+
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(
+                    centerX, centerY, radius,
+                    i * anglePerSegment + rotation,
+                    (i + 1) * anglePerSegment + rotation
+                );
+                ctx.closePath();
+                ctx.fill();
+
+                // ✏️ --- Texte COURT sur la roue --- ✏️
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(i * anglePerSegment + anglePerSegment / 2 + rotation);
+                ctx.textAlign = "right";
+                ctx.fillStyle = "#fff";
+
+                let text = shortMalus[i];
+                let fontSize = 16;
+                const maxWidth = radius - 30;
+                ctx.font = fontSize + "px Arial";
+
+                while (ctx.measureText(text).width > maxWidth && fontSize > 10) {
+                    fontSize--;
+                    ctx.font = fontSize + "px Arial";
+                }
+
+                ctx.fillText(text, radius - 10, 8);
+                ctx.restore();
+            }
+        }
+
+        // 🎯 --- ANIMATION DU SPIN --- 🎯
+        spinBtn.addEventListener('click', () => {
+            if (malus.length === 0) return;
+
+            result.textContent = "";
+            result.classList.remove('flash');
+
+            const randomDeg = Math.random() * 360 + 720;
+            const randomRad = randomDeg * Math.PI / 180;
+            const duration = 4000;
+
+            const initialRotation = rotation;
+            let start = null;
+
+            function animate(ts) {
+                if (!start) start = ts;
+
+                const progress = ts - start;
+                const easeOut = 1 - Math.pow(1 - progress / duration, 3);
+                rotation = initialRotation + easeOut * randomRad;
+
+                if (progress > duration * 0.8) {
+                    rotation += Math.sin(progress / 50) * 0.02;
+                }
+
+                drawWheel();
+
+                if (progress < duration) {
+                    requestAnimationFrame(animate);
+                } else {
+                    //  --- Sélection finale ---
+                    const nbSegments = malus.length;
+                    const finalRotation = rotation % (2 * Math.PI);
+                    const anglePerSegment = 2 * Math.PI / nbSegments;
+
+                    const pointerAngle = -Math.PI / 2; // pointeur en haut
+
+                    let index = Math.floor(
+                        ((pointerAngle - finalRotation + 2 * Math.PI) % (2 * Math.PI)) /
+                        anglePerSegment
+                    );
+                    index = (index + nbSegments) % nbSegments;
+
+                    const selectedMalus = malus[index];
+
+                    const reactions = [
+                        "😖 Ouch!", "💀 Oof…", "😵 That hurts!",
+                        "🤕 Bad luck!", "😬 Whoops…",
+                        "🔥 That’s gonna hurt!", "😭 Disaster!"
+                    ];
+
+                    const reaction = reactions[Math.floor(Math.random() * reactions.length)];
+
+                    result.textContent = selectedMalus + " " + reaction;
+                    result.classList.add("flash");
+
+                    const pointer = document.querySelector(".pointer");
+                    pointer.classList.add("flash");
+                    setTimeout(() => pointer.classList.remove("flash"), 1000);
+
+                    setTimeout(() => result.classList.remove("flash"), 1500);
+
+                    createParticles();
+                }
+            }
+
+            requestAnimationFrame(animate);
+        });
+
+        // ✨ --- PARTICULES --- ✨
+        function createParticles() {
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.left = '50%';
+            container.style.top = '50%';
+            container.style.pointerEvents = 'none';
+            document.body.appendChild(container);
+
+            for (let i = 0; i < 30; i++) {
+                const p = document.createElement('div');
+                p.style.position = 'absolute';
+                p.style.width = '6px';
+                p.style.height = '6px';
+                p.style.background = ['#ffea00', '#ff5f6d', '#fff', '#2ecc71'][Math.floor(Math.random() * 4)];
+                p.style.borderRadius = '50%';
+                container.appendChild(p);
+
+                const angle = Math.random() * 2 * Math.PI;
+                const distance = Math.random() * 150 + 50;
+                const dx = Math.cos(angle) * distance;
+                const dy = Math.sin(angle) * distance;
+                const d = Math.random() * 1000 + 500;
+
+                p.animate([
+                    { transform: 'translate(0,0)', opacity: 1 },
+                    { transform: `translate(${dx}px,${dy}px)`, opacity: 0 }
+                ], { duration: d, easing: "ease-out" });
+
+                setTimeout(() => p.remove(), d);
+            }
+
+            setTimeout(() => container.remove(), 1200);
+        }
+    </script>
+
+</body>
+
+</html>
